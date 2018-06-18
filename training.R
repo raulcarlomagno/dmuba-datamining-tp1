@@ -1,7 +1,9 @@
 library("data.table")
 library("dplyr")
 
-df <- fread("tweets-processed.csv")
+#df <- fread("tweets-processed.csv")
+df <- fread("tweets.csv")
+df$text <- NULL
 df$account_lang <- as.factor(df$account_lang)
 df$source <- as.factor(df$source)
 df$popular <- as.factor(df$popular)
@@ -16,14 +18,49 @@ df.test <- df[-idsTrain, ]
 
 library(mlbench)
 library(caret)
+library(e1071)
 
+
+#The example below loads the Pima Indians Diabetes dataset and constructs an Learning Vector Quantization (LVQ) model
 # prepare training scheme
 control <- trainControl(method="repeatedcv", number=10, repeats=3)
 # train the model
-model <- train(diabetes~., data=PimaIndiansDiabetes, method="lvq", preProcess="scale", trControl=control)
+model <- train(popular~., data=df.train, method="lvq", preProcess="scale", trControl=control)
 # estimate variable importance
 importance <- varImp(model, scale=FALSE)
 # summarize importance
 print(importance)
 # plot importance
 plot(importance)
+
+dfVariables <- importance$importance
+dfVariables$variable <- rownames(dfVariables)
+dfVariables$no <- NULL
+dfVariables$importance <- dfVariables$si
+dfVariables$si <- NULL
+rownames(dfVariables) <- NULL
+dfVariables <- dfVariables[order(-dfVariables$importance),] #ordeno por mayor importancia
+
+
+
+################
+library(rlist)
+
+control <- trainControl(method="none") #no se usó cv adrede
+indepVars <- ""
+modelos <- list()
+#for(i in 1:nrow(dfVariables)) {
+for(i in 1:2) {
+  row <- dfVariables[i,]
+  indepVars <- paste(indepVars, row$variable , sep = "+")
+  print(indepVars)
+  
+  model <- train(as.formula(paste0("popular ~ ", indepVars)), data=df.train, method="rpart", trControl=control)
+  list.append(modelos, item = c(model,0,indepVars))
+}
+
+
+
+predicts <- predict(model, df.test)
+auc <- mean(df.test$popular == predicts)
+auc
