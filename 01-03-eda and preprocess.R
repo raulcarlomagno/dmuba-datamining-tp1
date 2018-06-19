@@ -141,7 +141,7 @@ library("FactoInvestigate")
 library("factoextra")
 merged$popular <- ifelse(merged$favorite_count > 0 & merged$retweet_count > 0, 'si', 'no')
 
-mergedWithoutQuant <- merged[, setdiff(colnames(merged), c("account_lang", "source", "text"))]
+mergedWithoutQuant <- merged[, setdiff(colnames(merged), c("account_lang", "source", "text", "popular"))]
 pcaresult <- PCA(mergedWithoutQuant)
 #Investigate(pcaresult)
 summary(pcaresult, nbelements=Inf)  ## to print all the elements
