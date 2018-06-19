@@ -18,14 +18,14 @@ df.test <- df[-idsTrain, ]
 
 library(mlbench)
 library(caret)
-library(e1071)
+#library(e1071)
 
 
 #The example below loads the Pima Indians Diabetes dataset and constructs an Learning Vector Quantization (LVQ) model
 # prepare training scheme
 control <- trainControl(method="repeatedcv", number=10, repeats=3)
 # train the model
-model <- train(popular~., data=df.train, method="lvq", preProcess="scale", trControl=control)
+model <- train(popular ~ ., data=df.train, method="lvq", preProcess="scale", trControl=control)
 # estimate variable importance
 importance <- varImp(model, scale=FALSE)
 # summarize importance
@@ -44,23 +44,33 @@ dfVariables <- dfVariables[order(-dfVariables$importance),] #ordeno por mayor im
 
 
 ################
-library(rlist)
 
-control <- trainControl(method="none") #no se usó cv adrede
+control <- trainControl(method="cv")
 indepVars <- ""
-modelos <- list()
-#for(i in 1:nrow(dfVariables)) {
-for(i in 1:2) {
+bestModel <- NA
+bestAuc <- 0
+
+for(i in 1:nrow(dfVariables)) {
   row <- dfVariables[i,]
   indepVars <- paste(indepVars, row$variable , sep = "+")
   print(indepVars)
   
   model <- train(as.formula(paste0("popular ~ ", indepVars)), data=df.train, method="rpart", trControl=control)
-  list.append(modelos, item = c(model,0,indepVars))
+  print(model)
+  
+  predicts <- predict(model, df.test)
+  auc <- mean(df.test$popular == predicts)
+  print(auc)
+  
+  if(bestAuc == 0){
+    bestAuc <- auc
+    bestModel <- model
+  } else if(auc > bestAuc){
+    bestAuc <- auc
+    bestModel <- model
+    break
+  }
 }
 
-
-
-predicts <- predict(model, df.test)
-auc <- mean(df.test$popular == predicts)
-auc
+library(rpart.plot)
+rpart.plot(bestModel$finalModel)
